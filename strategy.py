@@ -3,35 +3,39 @@ import numpy as np
 import yfinance as yf
 
 
-STRATEGY_BEGINS = 200
-
-
 class Strategy:
 
     def __init__(self, ticker: str, starting_date: str) -> None:
         self.ticker = ticker
         self.stock = yf.Ticker(ticker)
         self.df = self.stock.history(start=starting_date, rounding=True)[['Close']].rename(columns={'Close': 'Price'})
-        self.long: list[tuple[int, int]] = []
-        self.short: list[tuple[int, int]] = []
+        self.long: list[tuple[int, int]] = []    # intervals of holding long position
+        self.short: list[tuple[int, int]] = []   # intervals of holding short position
 
     def generate_indicators(self) -> None:
+        """
+            currently only the SMAs for a simple strategy demonstration
+        """
         self.df['SMA20'] = self.df['Price'].rolling(20).mean()
         self.df['SMA50'] = self.df['Price'].rolling(50).mean()
         self.df['SMA200'] = self.df['Price'].rolling(200).mean()
 
     def determine_position(self) -> None:
         """
+            Assigns values according to the strategy
+
             1: long
             0: no position
            -1: short
         """
-        # self.df['position'] = np.zeros(len(self.df['Price']))
-        # condition = self.df['SMA20'] > self.df['SMA50'] and self.df['SMA50'] > self.df['SMA200']
-        # self.df.iloc[STRATEGY_BEGINS:, self.df.columns.get_loc('position')] = np.where(condition[STRATEGY_BEGINS:], 'new_value', self.df.iloc[STRATEGY_BEGINS:, self.df.columns.get_loc('position')])
+        # an elementary trend following strategy
+        # long when SMA20 above SMA50 AND SMA50 above SMA200; short if SMA20 below SMA50 AND SMA50 below SMA200
         self.df['position'] = (self.df['SMA20'] > self.df['SMA50']).astype(int) + (self.df['SMA50'] > self.df['SMA200']).astype(int) - 1
 
     def find_trade_dates(self) -> None:
+        """
+            Find the dates when trades need to be executed
+        """
         current_value = None
         start = None
         for i, value in enumerate(self.df.position):
